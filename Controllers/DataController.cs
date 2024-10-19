@@ -1,4 +1,5 @@
 ﻿using Database;
+using DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,24 @@ namespace Controllers
 				return NotFound();
 
 			return Ok(user.SavedData);
+		}
+		
+		[Authorize]
+		[HttpPut("user")]
+		public async Task<IActionResult> UpdateUserData([FromBody] string savedData)
+		{
+			var userId = User.FindFirst("Id")?.Value;
+			if (string.IsNullOrEmpty(userId))
+				return Unauthorized();
+
+			var user = await context.Users.FindAsync(int.Parse(userId));
+			if (user == null)
+				return NotFound();
+
+			user.SavedData = savedData;
+			await context.SaveChangesAsync();
+
+			return Ok(user);
 		}
 	}
 }
