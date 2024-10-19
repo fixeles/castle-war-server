@@ -1,40 +1,70 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Database;
+using DTO;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Models;
 
 namespace Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class AuthController : ControllerBase
+public class AuthController(ApplicationDbContext context) : ControllerBase
 {
-	private readonly ApplicationDbContext _context;
-
-	public AuthController(ApplicationDbContext context)
-	{
-		_context = context;
-	}
+	private readonly PasswordHasher<User> _passwordHasher = new();
 
 	[HttpPost("register")]
-	public IActionResult Register([FromBody] User user)
+	public async Task<IActionResult> Register([FromBody] LoginDTO loginDTO)
 	{
-		if (_context.Users.Any(u => u.UserName == user.UserName))
-		{
+		if (context.Users.Any(u => u.UserName == loginDTO.Username))
 			return Conflict("Nickname already exists.");
-		}
-		_context.Users.Add(user);
-		_context.SaveChanges();
-		return Ok("User registered successfully.");
+
+		var newUser = new User();
+		newUser.UserName = loginDTO.Username;
+		newUser.PasswordHash = _passwordHasher.HashPassword(newUser, loginDTO.Password);
+		context.Users.Add(newUser);
+		await context.SaveChangesAsync();
+
+		return Ok(new { Token = GenerateJwtToken(newUser) });
 	}
 
 	[HttpPost("login")]
-	public IActionResult Login([FromBody] User user)
+	public async Task<IActionResult> Login([FromBody] LoginDTO loginDTO)
 	{
-		var existingUser = _context.Users
-			.FirstOrDefault(u => u.UserName == user.UserName && u.PasswordHash == user.PasswordHash);
-		if (existingUser == null)
+		var user = await context.Users.SingleOrDefaultAsync(p => p.UserName == loginDTO.Username);
+		if (user == null)
+			return Unauthorized();
+
+		var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash!, loginDTO.Password);
+		if (result == PasswordVerificationResult.Failed)
+			return Unauthorized();
+
+		return Ok(new { Token = GenerateJwtToken(user) });
+	}
+
+	private string GenerateJwtToken(User user)
+	{
+		var claims = new[]
 		{
-			return Unauthorized("Invalid credentials.");
-		}
-		return Ok("Login successful.");
+			new Claim(JwtRegisteredClaimNames.Sub, user.UserName!),
+			new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+			new Claim("Id", user.Id)
+		};
+
+		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.SymmetricSecurityKey));
+		var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+		var token = new JwtSecurityToken(
+			issuer: null,
+			audience: null,
+			claims: claims,
+			expires: DateTime.Now.AddDays(2),
+			signingCredentials: creds);
+
+		return new JwtSecurityTokenHandler().WriteToken(token);
 	}
 }

@@ -1,5 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.Text;
+using Database;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Models;
 
 public class Startup
@@ -13,6 +17,25 @@ public class Startup
 
 	public void ConfigureServices(IServiceCollection services)
 	{
+		var key = Encoding.UTF8.GetBytes(Constants.SymmetricSecurityKey);
+		services.AddAuthentication(x =>
+			{
+				x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+				x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+			})
+			.AddJwtBearer(x =>
+			{
+				x.RequireHttpsMetadata = true;
+				x.SaveToken = true;
+				x.TokenValidationParameters = new TokenValidationParameters
+				{
+					ValidateIssuerSigningKey = true,
+					IssuerSigningKey = new SymmetricSecurityKey(key),
+					ValidateIssuer = false,
+					ValidateAudience = false
+				};
+			});
+
 		services.Configure<IdentityOptions>(options =>
 		{
 			// options.User.RequireUniqueEmail = true;
@@ -40,20 +63,11 @@ public class Startup
 			app.UseDeveloperExceptionPage();
 		}
 
-		app.UseRouting(); // Это необходимо добавить перед вызовом UseEndpoints
+		app.UseRouting(); // Before UseEndpoints
 
 		app.UseAuthentication();
 		app.UseAuthorization();
 
 		app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
 	}
-}
-
-public class ApplicationDbContext : DbContext
-{
-	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-		: base(options) { }
-
-	public DbSet<User> Users { get; set; } = null!;
-	// Другие DbSet'ы и настройки...
 }
