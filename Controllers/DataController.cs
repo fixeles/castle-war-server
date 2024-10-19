@@ -1,45 +1,45 @@
 ﻿using Database;
 using DTO;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Controllers
 {
+	[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 	[Route("api/[controller]")]
 	[ApiController]
-	public class DataController(ApplicationDbContext context) : ControllerBase
+	public class DataController(ApplicationDbContext db) : ControllerBase
 	{
-		[Authorize]
 		[HttpGet("user")]
 		public async Task<IActionResult> GetUserData()
 		{
 			var userId = User.FindFirst("Id")?.Value;
 			if (string.IsNullOrEmpty(userId))
-				return Unauthorized();
+				return Unauthorized(Constants.Responces.UserNotFound);
 
-			var user = await context.Users.FindAsync(int.Parse(userId));
+			var user = await db.Users.FindAsync(userId);
 			if (user == null)
-				return NotFound();
+				return NotFound(Constants.Responces.UserNotFound);
 
 			return Ok(user.SavedData);
 		}
-		
-		[Authorize]
-		[HttpPut("user")]
-		public async Task<IActionResult> UpdateUserData([FromBody] string savedData)
+
+		[HttpPost("user")]
+		public async Task<IActionResult> UpdateUserData([FromForm] SaveDataDTO dto)
 		{
 			var userId = User.FindFirst("Id")?.Value;
 			if (string.IsNullOrEmpty(userId))
-				return Unauthorized();
+				return Unauthorized(Constants.Responces.UserNotFound);
 
-			var user = await context.Users.FindAsync(int.Parse(userId));
+			var user = await db.Users.FindAsync(userId);
 			if (user == null)
-				return NotFound();
+				return NotFound(Constants.Responces.UserNotFound);
 
-			user.SavedData = savedData;
-			await context.SaveChangesAsync();
+			user.SavedData = dto.Data;
+			await db.SaveChangesAsync();
 
-			return Ok(user);
+			return Ok();
 		}
 	}
 }

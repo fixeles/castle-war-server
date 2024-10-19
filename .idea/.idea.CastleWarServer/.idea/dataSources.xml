@@ -2,7 +2,7 @@
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
     <data-source source="LOCAL" name="database [2]" uuid="b68fc8b7-f713-4793-84d2-79bce3d034ce">
-      <driver-ref>sqlite.xerial</driver-ref>
+      <driver-ref>6caaa21c-ddb7-40f1-8d5c-0366e21f45e3</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
       <jdbc-url>jdbc:sqlite:C:\Vladislav\Projects\castle-war-server\bin\Debug\net8.0\database.db</jdbc-url>

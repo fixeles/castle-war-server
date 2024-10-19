@@ -24,7 +24,7 @@ public static class SSH
 			{
 				if (!string.IsNullOrEmpty(e.Data))
 				{
-					Console.WriteLine(e.Data);
+					Console.WriteLine("OUTPUT: " + e.Data);
 				}
 			};
 

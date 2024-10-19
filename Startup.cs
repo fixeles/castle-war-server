@@ -6,18 +6,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Models;
 
-public class Startup
+public class Startup(IConfiguration configuration)
 {
-	public IConfiguration Configuration { get; }
-
-	public Startup(IConfiguration configuration)
-	{
-		Configuration = configuration;
-	}
-
 	public void ConfigureServices(IServiceCollection services)
 	{
-		var key = Encoding.UTF8.GetBytes(Constants.SymmetricSecurityKey);
+		services.AddCors(options =>
+		{
+			options.AddPolicy("AllowAllOrigins",
+				builder => builder.AllowAnyOrigin()
+					.AllowAnyMethod()
+					.AllowAnyHeader());
+		});
+
+		var key = Encoding.UTF8.GetBytes(Constants.JwtSecretKey);
 		services.AddAuthentication(x =>
 			{
 				x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -30,15 +31,16 @@ public class Startup
 				x.TokenValidationParameters = new TokenValidationParameters
 				{
 					ValidateIssuerSigningKey = true,
+					ValidateIssuer = true,
+					ValidateAudience = true,
 					IssuerSigningKey = new SymmetricSecurityKey(key),
-					ValidateIssuer = false,
-					ValidateAudience = false
+					ValidIssuer = Constants.Issuer,
+					ValidAudience = Constants.Audience
 				};
 			});
 
 		services.Configure<IdentityOptions>(options =>
 		{
-			// options.User.RequireUniqueEmail = true;
 			options.User.AllowedUserNameCharacters =
 				"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
 		});
@@ -46,7 +48,7 @@ public class Startup
 
 		services.AddDbContext<ApplicationDbContext>(options =>
 		{
-			options.UseSqlite(Configuration.GetConnectionString("DefaultConnection"));
+			options.UseSqlite(configuration.GetConnectionString("DefaultConnection"));
 		});
 
 		services.AddIdentity<User, IdentityRole>()
@@ -58,12 +60,20 @@ public class Startup
 
 	public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
 	{
+		app.UseCors("AllowAllOrigins");
 		if (env.IsDevelopment())
 		{
 			app.UseDeveloperExceptionPage();
 		}
 
-		app.UseRouting(); // Before UseEndpoints
+		app.Use(async (context, next) =>
+		{
+			Console.WriteLine($"Request: {context.Request.Method}");
+			await next.Invoke();
+			Console.WriteLine($"Response: {context.Response.StatusCode}");
+		});
+
+		app.UseRouting();
 
 		app.UseAuthentication();
 		app.UseAuthorization();
