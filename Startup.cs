@@ -46,13 +46,13 @@ public class Startup(IConfiguration configuration)
 		});
 
 
-		services.AddDbContext<ApplicationDbContext>(options =>
+		services.AddDbContext<AppDbContext>(options =>
 		{
 			options.UseSqlite(configuration.GetConnectionString("DefaultConnection"));
 		});
 
 		services.AddIdentity<User, IdentityRole>()
-			.AddEntityFrameworkStores<ApplicationDbContext>()
+			.AddEntityFrameworkStores<AppDbContext>()
 			.AddDefaultTokenProviders();
 
 		services.AddControllersWithViews();

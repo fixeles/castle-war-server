@@ -13,7 +13,7 @@ namespace Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class AuthController(ApplicationDbContext db) : ControllerBase
+public class AuthController(AppDbContext db) : ControllerBase
 {
 	private readonly PasswordHasher<User> _passwordHasher = new();
 

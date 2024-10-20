@@ -2,5 +2,7 @@
 
 public class SaveDataDTO
 {
-	public string Data { get; set; }
+	public bool ForceClientData { get; set; }
+	public required string Playtime { get; set; }
+	public required string Data { get; set; }
 }
